@@ -1,0 +1,101 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Gallery</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        function toggleSignUp() {
+            var x = document.getElementById("signupForm");
+            if (x.style.display === "none") {
+                x.style.display = "block";
+            } else {
+                x.style.display = "none";
+            }
+        }
+    </script>
+</head>
+<body>
+
+<div class="content">
+    <div>
+        <h1>Photo Gallery</h1>
+        <p>Welcome to our Photo Gallery Application!</p>
+    </div>
+    <form method="POST" action="/submit">
+        <label for="userid">User ID:</label>
+        <input type="text" id="userid" name="user_id" required>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="user_pwd" required>
+        <input type="submit" value="Submit">
+    </form>
+    <button onclick="toggleSignUp()">Sign Up</button>
+    <div id="signupForm" style="display:none;">
+        <form method="POST" action="/signup">
+            <label for="newUserid">New User ID:</label>
+            <input type="text" id="newUserid" name="new_user_id" required>
+            <label for="newPassword">Password:</label>
+            <input type="password" id="newPassword" name="new_user_pwd" required>
+            <input type="submit" value="Sign Up">
+        </form>
+    </div>
+</div>
+</body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Gallery</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        function toggleForm() {
+            var loginForm = document.getElementById("loginForm");
+            var signupForm = document.getElementById("signupForm");
+            var formTitle = document.getElementById("formTitle");
+            if (signupForm.style.display === "none") {
+                signupForm.style.display = "block";
+                loginForm.style.display = "none";
+                formTitle.textContent = "Sign Up"; // Update the title to "Sign Up"
+            } else {
+                signupForm.style.display = "none";
+                loginForm.style.display = "block";
+                formTitle.textContent = "Photo Gallery"; // Revert the title to "Photo Gallery"
+            }
+        }
+    </script>
+</head>
+<body>
+
+<div class="content">
+    <div>
+        <h1 id="formTitle">Photo Gallery</h1>
+        <p>Welcome to our Photo Gallery Application!</p>
+    </div>
+    <div id="loginForm">
+        <form method="POST" action="/submit">
+            <label for="userid">User ID:</label>
+            <input type="text" id="userid" name="user_id" required>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="user_pwd" required>
+            <input type="submit" value="Submit">
+        </form>
+        <button onclick="toggleForm()">Sign Up</button>
+    </div>
+    <div id="signupForm" style="display:none;">
+        <form method="POST" action="/signup">
+            <label for="newUserid">New User ID:</label>
+            <input type="text" id="newUserid" name="new_user_id" required>
+            <label for="newPassword">Password:</label>
+            <input type="password" id="newPassword" name="new_user_pwd" required>
+            <input type="submit" value="Sign Up">
+        </form>
+        <button onclick="toggleForm()">Back to Login</button>
+    </div>
+</div>
+
+</body>
+</html>
+
