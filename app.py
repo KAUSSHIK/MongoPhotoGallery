@@ -11,6 +11,8 @@ from botocore.exceptions import NoCredentialsError
 import requests
 from dotenv import load_dotenv
 import os
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 
 app = Flask(__name__, template_folder='./templates', static_folder='./static') # Create a Flask app
 app.secret_key = 'COMS422KHAAA'  # Secret key for flash messages
@@ -34,10 +36,15 @@ BUCKET_NAME = os.getenv('BUCKET_NAME')
 # except NoCredentialsError:
 #     print("No AWS credentials found")
 
-#Connect to DynamoDB
-dynamodb = boto3.resource('dynamodb')
-users_table = dynamodb.Table('dynamo_photo_users')
-photos_table = dynamodb.Table('dynamo_photo_photos')
+
+# Connect to MongoDB
+mongo_conn_str = os.getenv('MONGO_URI')
+client = MongoClient(mongo_conn_str, server_api=ServerApi('1'))
+
+# DATABASE
+db = client['photo_app']
+users_collection = db['users']
+photos_collection = db['photos']
 
 # db = mysql.connector.connect(
 #     host=os.getenv('DB_HOST'),
@@ -77,32 +84,15 @@ def submit():
     else:
         flash('Invalid user ID or password. Please try again.')
         return redirect(url_for('home')) 
-
-# def check_credentials(user_id, user_password):
-#     # Use a context manager to ensure the database connection is closed properly
-#     with db.cursor() as cursor:
-#         cursor.execute("USE photo_gallery")
-
-#         query = "SELECT password FROM users WHERE user_id = %s"
-#         values = (user_id,)
-
-#         cursor.execute(query, values)
-
-#         result = cursor.fetchone()
     
-#     # Check if the user ID and password combination exists
-#     if result and result[0] == user_password:
-#         return True  # User ID and hashed password combination exists
-#     else:
-#         return False  # User ID and hashed password combination does not exist
-    
-def check_credentials(user_id, user_password):
-    response = users_table.get_item(Key={'user_id': user_id})
-    if 'Item' in response:
-        if response['Item']['password'] == user_password:
-            return True
-    return False
+def check_credentials(user_id, user_password): # In MongoDB
+    response = users_collection.find_one({'user_id': user_id})
+    if response and response['password'] == user_password:
+        return True
+    else:
+        return False
 
+# MongoDB method to get the photos of a user
 @app.route('/gallery')
 def gallery():
     if 'user_id' not in session:
@@ -113,11 +103,8 @@ def gallery():
     # Get the user ID from the session
     user_id = session['user_id']
 
-    # Fetch the photos from the photos table where the user ID matches
-    response = photos_table.scan(FilterExpression=boto3.dynamodb.conditions.Attr('user_id').eq(user_id))
-    photos = response['Items']
-    photos.sort(key=lambda photo: photo['photo_id'], reverse=True)
-
+    # Fetch the photos from the photos table where the user ID matches order by photo_id desc
+    photos = photos_collection.find({'user_id': user_id}).sort('photo_id', -1)
     # Extract photo URLs from the fetched rows
     images = [photo['photo_url'] for photo in photos]
 
@@ -168,14 +155,10 @@ def upload_image():
             # Get the user ID from the session
             user_id = session.get('user_id')
 
-            # Store the new photo URL in the DYNAMO DB photos table (photo_id, user_id, photo_url) (photo_id is auto inremented in MYSQL, we want the same in dynamoDB)
-            photo_id = len(photos_table.scan()['Items']) + 1 # Get the next photo ID
+            # Store the new photo URL in the MongoDB photos collection (photo_id, user_id, photo_url) (photo_id is auto inremented in MYSQL, we want the same in dynamoDB)
+            photo_id = photos_collection.count_documents({}) + 1
             photo_url = f"https://{BUCKET_NAME}.s3.us-east-2.amazonaws.com/{filename}"
-            photos_table.put_item(Item={
-                'photo_id': photo_id,
-                'user_id': user_id,
-                'photo_url': photo_url
-            })
+            photos_collection.insert_one({'photo_id': photo_id, 'photo_url': photo_url, 'user_id': user_id})
 
             flash('File successfully uploaded')
         except Exception as e:
@@ -190,6 +173,7 @@ def logout():
     flash('You have been logged out.')
     return redirect(url_for('home'))
 
+# Sign up using MongoDB
 @app.route('/signup', methods=['POST'])
 def signup():
     # Get the new user ID and password from the form
@@ -197,17 +181,14 @@ def signup():
     new_user_password = request.form.get('new_user_pwd')
     hashed_password = generate_sha256(new_user_password)
     
-    # Check if user already exists -- we will use DynamoDB for this
-    response = users_table.get_item(Key={'user_id': new_user_id})
-    if 'Item' in response:
-        flash('User ID already exists. Please log in.')
+    # Check if user already exists -- we will use MongoDB for this
+    response = users_collection.find_one({'user_id': new_user_id})
+    if response:
+        flash('User ID already exists. Please choose a different one.')
         return redirect(url_for('home'))
 
-    # Insert new user into the users table -- we will use DynamoDB for this
-    users_table.put_item(Item={
-        'user_id': new_user_id,
-        'password': hashed_password
-    })
+    # Insert new user into the users table -- we will use MongoDB for this
+    users_collection.insert_one({'user_id': new_user_id, 'password': hashed_password})
 
     flash('User successfully created. Please log in.')
     return redirect(url_for('home'))

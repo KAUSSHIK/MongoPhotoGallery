@@ -26,10 +26,17 @@ db = client['photo_app']
 users_collection = db['users']
 photos_collection = db['photos']
 
+# Delete all documents from the users collection
+users_collection.delete_many({})
+
+# Delete all documents from the photos collection
+photos_collection.delete_many({})
+
 #Load User and passwords into the database from migration_data folder -> users.csv
 
 with open('migration_data/users.csv', 'r') as file:
     reader = csv.reader(file)
+    next(reader)
     for row in reader:
         user = {
             'user_id': row[0],
@@ -40,9 +47,10 @@ with open('migration_data/users.csv', 'r') as file:
 #Load photos into the database from migration_data folder -> photos.csv
 with open('migration_data/photos.csv', 'r') as file:
     reader = csv.reader(file)
+    next(reader)
     for row in reader:
-        photo = {
-            'photo_id': row[0],
+        photo = { #photo_id is an integer
+            'photo_id': int(row[0]),
             'photo_url': row[1],
             'user_id': row[2],
         }
@@ -50,21 +58,4 @@ with open('migration_data/photos.csv', 'r') as file:
 #Check if the data was loaded into the database
 print(users_collection.find_one())
 print(photos_collection.find_one())
-
-# Get the first document in the users collection
-first_user = users_collection.find_one()
-
-# Delete the first document in the users collection
-users_collection.delete_one({'_id': first_user['_id']})
-
-# Get the first document in the photos collection
-first_photo = photos_collection.find_one()
-
-# Delete the first document in the photos collection
-photos_collection.delete_one({'_id': first_photo['_id']})
-
-#Check if the data was deleted from the database
-print(users_collection.find_one())
-print(photos_collection.find_one())
-
 
